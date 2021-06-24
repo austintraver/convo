@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/mattn/go-isatty"
+	"golang.org/x/sys/unix"
 	"log"
 
+	"github.com/logrusorgru/aurora/v3"
 	"github.com/spf13/cobra"
 )
 
@@ -11,8 +14,8 @@ var with string
 
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
-	Use:   "search REGEXP",
-	Short: "find conversations matching a regular expression",
+	Use:   "search PATTERN",
+	Short: "find conversations matching a SQL formatted pattern",
 	Run:   handleSearch,
 	Args:  cobra.ExactArgs(1),
 }
@@ -23,36 +26,62 @@ func handleSearch(cmd *cobra.Command, args []string) {
 	pattern := args[0]
 	query := `
 	SELECT
-	  chat.chat_identifier AS identifier,
-	  DATETIME(message.date / 1000000000 + STRFTIME("%s", "2001-01-01"), "unixepoch", "localtime") AS moment,
-	  text
+		DATETIME(message.date / 1000000000 + STRFTIME("%s", "2001-01-01"), "unixepoch", "localtime")
+			AS moment,
+		CASE
+			WHEN is_from_me = 0
+				THEN "<-"
+			WHEN is_from_me = 1
+				THEN "->"
+		END
+			AS way,
+		chat.chat_identifier
+			AS identifier,
+		text
 	FROM
-	  chat
-	  JOIN chat_message_join ON chat.rowid = chat_message_join.chat_id
-	  JOIN message ON chat_message_join.message_id = message.rowid
+		chat
+		JOIN chat_message_join
+			ON chat.rowid = chat_message_join.chat_id
+		JOIN message
+			ON chat_message_join.message_id = message.rowid
 	WHERE
-	  TRUE
-	  AND text LIKE ?
-	  AND identifier = ?
-	ORDER BY
-	  moment DESC
+		TRUE
+		AND text LIKE ?
+		-- filter out empty messages
+		AND text IS NOT NULL
+		AND trim(text, ' ') <> ''
+		AND text <> '￼'
+		-- filter out tapbacks
+		AND NOT text LIKE 'Loved “%”'
+		AND NOT text LIKE 'Liked “%”'
+		AND NOT text LIKE 'Laughed at “%”'
+		AND NOT text LIKE 'Disliked “%”'
+		AND NOT text LIKE 'Emphasized “%”'
+		AND NOT text LIKE '%an image'
 		`
+	if with != "" {
+		query += "AND identifier = ?"
+	}
 	// rows, err := db.Query(query, limit)
 	rows, err := db.Query(query, pattern, with)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer rows.Close()
-	fmt.Printf("%s\t%s\n", "identifier", "messages")
 	for rows.Next() {
-		var identifer string
 		var moment string
-		var text string
-		err = rows.Scan(&identifer, &moment, &text)
+		var way string
+		var identifier string
+		var content string
+		err = rows.Scan(&moment, &way, &identifier, &content)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		fmt.Printf("%s\t%s\t%s\n", identifer, moment, text)
+		if isatty.IsTerminal(uintptr(unix.Stdout)) {
+			fmt.Printf("[%s] %s (%s): %s\n", aurora.Blue(moment), aurora.Bold(way), aurora.Yellow(identifier), content)
+		} else {
+			fmt.Printf("[%s] %s (%s): %s\n", moment, way, identifier, content)
+		}
 	}
 	err = rows.Err()
 	if err != nil {

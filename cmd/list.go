@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/logrusorgru/aurora/v3"
+	"github.com/mattn/go-isatty"
+	"golang.org/x/sys/unix"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -12,8 +15,8 @@ import (
 // (which it is by default), then the value of this filter is disabled.
 var count = -1
 
-// listCommand represents the list command
-var listCommand = &cobra.Command{
+// listCmd represents the list command
+var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "show all conversations",
 	Run:   handleList,
@@ -27,32 +30,46 @@ var listCommand = &cobra.Command{
 func handleList(cmd *cobra.Command, args []string) {
 	query := `
 	SELECT
-    chat.chat_identifier AS identifier,
-    COUNT(chat.chat_identifier) AS messages
+    chat.chat_identifier AS id,
+    count(chat.chat_identifier) AS messages
 	FROM
 		chat
-		JOIN chat_message_join ON chat.rowid = chat_message_join.chat_id
-		JOIN message ON chat_message_join.message_id = message.rowid
+		JOIN chat_message_join ON chat."ROWID" = chat_message_join.chat_id
+		JOIN message ON chat_message_join.message_id = message."ROWID"
 	GROUP BY
 		chat.chat_identifier
 	HAVING messages > ?
+	-- filter out empty messages
+	AND text IS NOT NULL
+	AND trim(text, ' ') <> ''
+	AND text <> '￼'
+	-- filter out tapbacks
+	AND NOT text LIKE 'Loved “%”'
+	AND NOT text LIKE 'Liked “%”'
+	AND NOT text LIKE 'Laughed at “%”'
+	AND NOT text LIKE 'Disliked “%”'
+	AND NOT text LIKE 'Emphasized “%”'
+	AND NOT text LIKE '%an image'
 	ORDER BY
-		messages DESC;
+		messages DESC, id DESC;
 	`
 	rows, err := db.Query(query, count)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer rows.Close()
-	fmt.Printf("%s\t%s\n", "identifier", "messages")
 	for rows.Next() {
 		var id string
-		var name string
-		err = rows.Scan(&id, &name)
+		var messages string
+		err = rows.Scan(&id, &messages)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		fmt.Printf("%s\t%s\n", id, name)
+		if isatty.IsTerminal(uintptr(unix.Stdout)) {
+			fmt.Printf("%s\t%s\n", aurora.Yellow(id), aurora.Blue(messages))
+		} else {
+			fmt.Printf("%s\t%s\n", id, messages)
+		}
 	}
 	err = rows.Err()
 	if err != nil {
@@ -61,9 +78,9 @@ func handleList(cmd *cobra.Command, args []string) {
 }
 
 func init() {
-	rootCmd.AddCommand(listCommand)
+	rootCmd.AddCommand(listCmd)
 
-	listCommand.Flags().IntVarP(
+	listCmd.Flags().IntVarP(
 		&count,
 		"count",
 		"c",

@@ -1,0 +1,20 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+
+# Files that might be altered on a specific user's machine
+/.name
+/misc.xml
+/modules.xml
+/deployment.xml
+/vcs.xml
+/aws.xml
+/go.imports.xml
+/jsLibraryMappings.xml
+/dataSources.xml
+/sqldialects.xml

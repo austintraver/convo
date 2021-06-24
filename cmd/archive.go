@@ -55,6 +55,8 @@ func handleArchive(cmd *cobra.Command, args []string) {
 		AND NOT CONTENT LIKE 'Disliked “%”'
 		AND NOT CONTENT LIKE 'Emphasized “%”'
 		AND NOT CONTENT LIKE '%an image'
+		-- filter out Fitness app
+		AND NOT text LIKE '$(kIMTranscriptPluginBreadcrumb%'
 	ORDER BY moment ASC
 	`
 	// rows, err := db.Query(query, limit)

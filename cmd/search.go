@@ -57,7 +57,9 @@ func handleSearch(cmd *cobra.Command, args []string) {
 		AND NOT text LIKE 'Laughed at “%”'
 		AND NOT text LIKE 'Disliked “%”'
 		AND NOT text LIKE 'Emphasized “%”'
-		AND NOT text LIKE '%an image'
+	 	AND NOT text LIKE '%an image'
+		-- filter out Fitness app
+		AND NOT text LIKE '$(kIMTranscriptPluginBreadcrumb%'
 		`
 	if with != "" {
 		query += "AND identifier = ?"

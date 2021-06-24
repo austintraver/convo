@@ -50,6 +50,8 @@ func handleList(cmd *cobra.Command, args []string) {
 	AND NOT text LIKE 'Disliked “%”'
 	AND NOT text LIKE 'Emphasized “%”'
 	AND NOT text LIKE '%an image'
+	-- filter out Fitness app
+	AND NOT text LIKE '$(kIMTranscriptPluginBreadcrumb%'
 	ORDER BY
 		messages DESC, id DESC;
 	`

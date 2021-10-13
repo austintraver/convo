@@ -46,20 +46,13 @@ func handleSearch(cmd *cobra.Command, args []string) {
 			ON chat_message_join.message_id = message.rowid
 	WHERE
 		TRUE
-		AND text LIKE ?
+	  	AND instr(text, ?) > 0
 		-- filter out empty messages
 		AND text IS NOT NULL
 		AND trim(text, ' ') <> ''
 		AND text <> '￼'
-		-- filter out tapbacks
-		AND NOT text LIKE 'Loved “%”'
-		AND NOT text LIKE 'Liked “%”'
-		AND NOT text LIKE 'Laughed at “%”'
-		AND NOT text LIKE 'Disliked “%”'
-		AND NOT text LIKE 'Emphasized “%”'
-	 	AND NOT text LIKE '%an image'
-		-- filter out Fitness app
-		AND NOT text LIKE '$(kIMTranscriptPluginBreadcrumb%'
+		-- filter out message reactions
+		AND associated_message_type == 0
 		`
 	if with != "" {
 		query += "AND identifier = ?"

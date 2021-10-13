@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/logrusorgru/aurora/v3"
 	"github.com/mattn/go-isatty"
 	"golang.org/x/sys/unix"
-	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -36,22 +37,16 @@ func handleList(cmd *cobra.Command, args []string) {
 		chat
 		JOIN chat_message_join ON chat."ROWID" = chat_message_join.chat_id
 		JOIN message ON chat_message_join.message_id = message."ROWID"
+	WHERE TRUE
+	-- filter out message reactions
+	AND text IS NOT NULL
+	AND associated_message_type == 0
+	-- filter out empty messages
+	AND trim(text, ' ') <> ''
+	AND text <> '￼'
 	GROUP BY
 		chat.chat_identifier
 	HAVING messages > ?
-	-- filter out empty messages
-	AND text IS NOT NULL
-	AND trim(text, ' ') <> ''
-	AND text <> '￼'
-	-- filter out tapbacks
-	AND NOT text LIKE 'Loved “%”'
-	AND NOT text LIKE 'Liked “%”'
-	AND NOT text LIKE 'Laughed at “%”'
-	AND NOT text LIKE 'Disliked “%”'
-	AND NOT text LIKE 'Emphasized “%”'
-	AND NOT text LIKE '%an image'
-	-- filter out Fitness app
-	AND NOT text LIKE '$(kIMTranscriptPluginBreadcrumb%'
 	ORDER BY
 		messages DESC, id DESC;
 	`

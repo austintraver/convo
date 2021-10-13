@@ -5,6 +5,7 @@ import (
 	"github.com/mattn/go-isatty"
 	"golang.org/x/sys/unix"
 	"log"
+	"strings"
 
 	"github.com/logrusorgru/aurora/v3"
 	"github.com/spf13/cobra"
@@ -16,6 +17,29 @@ var archiveCmd = &cobra.Command{
 	Short: "Archive the text contents of a conversation to standard output",
 	Run:   handleArchive,
 	Args:  cobra.ExactArgs(1),
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		query := `
+		SELECT
+		DISTINCT
+		chat.chat_identifier as id
+		FROM
+		chat
+		`
+		rows, err := db.Query(query)
+		if err != nil {
+			panic(err)
+		}
+		defer rows.Close()
+		var id string
+		var output []string
+		for rows.Next() {
+			err = rows.Scan(&id)
+			if strings.Contains(id, toComplete) {
+				output = append(output, id)
+			}
+		}
+		return output, cobra.ShellCompDirectiveNoFileComp
+	},
 }
 
 // handleArchive finds messages that match the provided pattern,
@@ -48,15 +72,13 @@ func handleArchive(cmd *cobra.Command, args []string) {
 		AND content IS NOT NULL
 		AND trim(content, ' ') <> ''
 		AND CONTENT <> '￼'
-		-- filter out tapbacks
-		AND NOT CONTENT LIKE 'Loved “%”'
-		AND NOT CONTENT LIKE 'Liked “%”'
-		AND NOT CONTENT LIKE 'Laughed at “%”'
-		AND NOT CONTENT LIKE 'Disliked “%”'
-		AND NOT CONTENT LIKE 'Emphasized “%”'
-		AND NOT CONTENT LIKE '%an image'
+		-- filter out message reactions
+		AND text IS NOT NULL
+		AND associated_message_type == 0
+		-- filter out empty messages
+		AND trim(text, ' ') <> ''
+		AND text <> '￼'
 		-- filter out Fitness app
-		AND NOT text LIKE '$(kIMTranscriptPluginBreadcrumb%'
 	ORDER BY moment ASC
 	`
 	// rows, err := db.Query(query, limit)
@@ -65,11 +87,8 @@ func handleArchive(cmd *cobra.Command, args []string) {
 		log.Fatalln(err)
 	}
 	defer rows.Close()
+	var moment, way, id, content string
 	for rows.Next() {
-		var moment string
-		var way string
-		var id string
-		var content string
 		err = rows.Scan(&moment, &way, &id, &content)
 		if err != nil {
 			log.Fatalln(err)

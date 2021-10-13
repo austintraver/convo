@@ -6,7 +6,7 @@ in the Messages app.
 ## Installation
 
 ```shell
-go get github.com/austintraver/convo
+go install github.com/austintraver/convo@latest
 ```
 
 ## Usage

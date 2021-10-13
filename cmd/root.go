@@ -3,9 +3,10 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,8 +19,9 @@ var home string
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:     "convo",
-	Version: "0.1.2",
-	Short:   "A brief description of your application",
+	Version: "0.1.3",
+	Short:   "convo: A CLI for your iMessage conversations",
+	// DisableFlagsInUseLine: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -40,12 +42,13 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.dm.yaml)")
+	rootCmd.PersistentFlags().StringVar(&configFile, "config", "", "config file (default is $HOME/.convo.yaml)")
 
 	var err error
 	home, err = os.UserHomeDir()
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 }
 
@@ -64,11 +67,13 @@ func initConfig() {
 		viper.SetConfigName(".convo")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	// Read in environment variables that match the format CONVO_[A-Z]+ format.
+	viper.AutomaticEnv()
 
 	// If a config file is found, read it in.
-	err := viper.ReadInConfig()
-	if err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
+	viper.ReadInConfig()
+	// err := viper.ReadInConfig()
+	// if err == nil {
+	// 	fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	// }
 }

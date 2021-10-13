@@ -2,12 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/mattn/go-isatty"
-	"golang.org/x/sys/unix"
 	"log"
 
 	"github.com/logrusorgru/aurora/v3"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
+	"golang.org/x/sys/unix"
 )
 
 var with string
@@ -15,7 +15,7 @@ var with string
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
 	Use:   "search PATTERN",
-	Short: "find conversations matching a SQL formatted pattern",
+	Short: "Find conversations matching a SQL formatted pattern",
 	Run:   handleSearch,
 	Args:  cobra.ExactArgs(1),
 }

@@ -13,7 +13,7 @@ import (
 // archiveCmd represents the search command
 var archiveCmd = &cobra.Command{
 	Use:   "archive ID",
-	Short: "archive the text contents of a conversation to standard output",
+	Short: "Archive the text contents of a conversation to standard output",
 	Run:   handleArchive,
 	Args:  cobra.ExactArgs(1),
 }

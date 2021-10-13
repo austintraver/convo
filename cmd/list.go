@@ -18,7 +18,7 @@ var count = -1
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "show all conversations",
+	Short: "Show all conversations",
 	Run:   handleList,
 	Args:  cobra.NoArgs,
 }
